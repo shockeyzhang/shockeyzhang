@@ -2,7 +2,7 @@
 importClass(android.database.sqlite.SQLiteDatabase);
 importClass(android.net.ConnectivityManager);
 
-let latestAppVer = 11005;
+let latestAppVer = 115;
 let latestDbVer = 221105;
 
 var csvFileName = "db.csv";
@@ -18,7 +18,7 @@ function downloadRemoteDB(url) {
     try {
         //console.show()    //打开控制台
         //获取网页状态运行代码
-        //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/HikCultureHelper/auth.js"//远程地址
+        //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/auth.js"//远程地址
         var cm = context.getSystemService(context.CONNECTIVITY_SERVICE);
         var net = cm.getActiveNetworkInfo();
 
@@ -144,8 +144,8 @@ function updateTikuVer()
     
     var datetimeStr = y + "-" +m+"-"+d+"_"+h+":"+min+":"+s;
     //toastLog(datetimeStr);
-    var sql = "INSERT INTO tiku (question, answer, type) VALUES ('"+tikuVerInfo+"', '"+datetimeStr+"','"+ latestDbVer +"') " +
-    "ON CONFLICT(question) DO UPDATE SET answer = '" + datetimeStr + "', type = '"+latestDbVer+"'";
+    var sql = "INSERT INTO tiku (question, answer, option) VALUES ('"+tikuVerInfo+"', '"+datetimeStr+"','"+ latestDbVer +"') " +
+    "ON CONFLICT(question) DO UPDATE SET answer = '" + datetimeStr + "', option = '"+latestDbVer+"'";
     //log("sql=%s", sql);
     insertOrUpdate(sql);
 }
@@ -158,20 +158,20 @@ function updateApp()
 function updateDb()
 {
     //下载远程题库
-    //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/HikCultureHelper/tiku.csv";//远程地址1
-    var url = "https://cdn.staticaly.com/gh/shockeyzhang/HikCultureHelper/main/tiku.csv";//远程地址2
-    //var url = "https://rawcdn.githack.com/shockeyzhang/HikCultureHelper/main/tiku.csv";//远程地址3 无法访问
+    //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/tiku.csv";//远程地址1
+    var url = "https://cdn.staticaly.com/gh/shockeyzhang/xxqghelper/main/tiku.csv";//远程地址2
+    //var url = "https://rawcdn.githack.com/shockeyzhang/xxqghelper/main/tiku.csv";//远程地址3 无法访问
     if(updateServer == "1")
     {
-        url = "https://cdn.jsdelivr.net/gh/shockeyzhang/HikCultureHelper/tiku.csv";//远程地址1
+        url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/tiku.csv";//远程地址1
     }
     else if(updateServer == "2")
     {
-        url = "https://cdn.staticaly.com/gh/shockeyzhang/HikCultureHelper/main/tiku.csv";//远程地址2
+        url = "https://cdn.staticaly.com/gh/shockeyzhang/xxqghelper/main/tiku.csv";//远程地址2
     }
     else
     {
-        url = "http://ftp6287982.host104.abeiyun.cn/data/files/tiku.csv";//远程地址3 ,阿贝云服务器
+        url = "http://shockey.freeee.ml/xxqghelper/files/tiku.csv";//远程地址3 ,freehost服务器
     }
     
     var updateDialog = dialogs.build({
@@ -244,12 +244,12 @@ function updateDb()
                 }
 
                 if (content[2].length) {
-                    ins += ",options";
+                    ins += ",wrongAnswer";
                     val += ",'" + content[2] + "'";
                 }
 
                 if (content[3].length) {
-                    ins += ",type";
+                    ins += ",option";
                     val += ",'" + content[3] + "'";
                 }
 
@@ -272,7 +272,7 @@ function updateDb()
             }
             else
             {
-                console.log("Q:%s, A:%s, O:%s, T:%s\n", content[0], content[1], content[2], content[3]);
+                console.log("Q:%s, A:%s, W:%s, O:%s\n", content[0], content[1], content[2], content[3]);
             }
 
             // 更新进度条
@@ -300,7 +300,7 @@ function checkUpdate()
     var appVer = app.versionCode;//软件版本
     var dbVer = 0;
     
-    var sqlStr = "SELECT question,answer,options,type FROM tiku WHERE question LIKE '%%"+tikuVerInfo+"%'";
+    var sqlStr = "SELECT question,answer,wrongAnswer,option FROM tiku WHERE question LIKE '%%"+tikuVerInfo+"%'";
     
     var qaArray = searchDb("", "tiku", sqlStr);
     var qCount = qaArray.length;
@@ -309,8 +309,8 @@ function checkUpdate()
     if (qCount > 0) {
         console.log("结果：%d/%d", 1, qCount);
         console.log(qaArray[0].question+":"+qaArray[0].answer);
-        console.info("题库版本：", qaArray[0].type);
-        dbVer = parseInt(qaArray[0].type);
+        console.info("题库版本：", qaArray[0].option);
+        dbVer = parseInt(qaArray[0].option);
     } 
     // else {
     //     console.error("未找到");
