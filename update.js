@@ -1,15 +1,52 @@
 //db操作
 importClass(android.database.sqlite.SQLiteDatabase);
 importClass(android.net.ConnectivityManager);
+importClass(java.net.HttpURLConnection);
+importClass(java.net.URL);
+importClass(java.io.File);
+importClass(java.io.FileOutputStream);
 
-let latestAppVer = 115;
-let latestDbVer = 221105;
+let latestAppVer = 116;
+let latestDbVer = 221110;
 
 var csvFileName = "db.csv";
 var confi = files.read("./config.txt");
 var conf = confi.split(" ");
 
-var updateServer = conf[2];//远程更新服务器选择
+var updateServer = conf[8];//远程更新服务器选择
+
+function diwnloadRemotAPP(url, downloadDialog){
+    threads.start(function () {
+        var path = files.getSdcardPath() + "/Download/xxqghelper.apk";
+        let apkFile = new File(path);
+        var conn = new URL(url).openConnection();
+        conn.connect();
+        let is = conn.getInputStream();
+        let length = conn.getContentLength();
+        let fos = new FileOutputStream(apkFile);
+        let count = 0;
+        let buffer = java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, 1024);
+        while (true) {
+            var p = ((count / length) * 100);
+            let numread = is.read(buffer);
+            count += numread;
+            // 下载完成
+            if (numread < 0) {
+                toast("下载完成");
+                downloadDialog.dismiss();
+                downloadDialog = null;
+                break;
+            }
+            // 更新进度条
+            downloadDialog.setProgress(p);
+            fos.write(buffer, 0, numread);
+        }
+        fos.close();
+        is.close();
+        //自动打开进行安装
+        app.viewFile(path);
+    });
+}
 
 /**
  * 主函数:利用脚本引擎运行指定的代码
@@ -18,7 +55,6 @@ function downloadRemoteDB(url) {
     try {
         //console.show()    //打开控制台
         //获取网页状态运行代码
-        //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/auth.js"//远程地址
         var cm = context.getSystemService(context.CONNECTIVITY_SERVICE);
         var net = cm.getActiveNetworkInfo();
 
@@ -55,10 +91,10 @@ function downloadRemoteDB(url) {
 }
 
 
-var sdPath = files.getSdcardPath() + "/shockey/com.shockey.cetc/files/";//注意直接用sd卡目录，解决手机不能创建目录成功问题，缺点是删除软件后会残留此处文件
+var sdPath = files.getSdcardPath() + "/shockey/com.shockey.xxqghelper/files/";//注意直接用sd卡目录，解决手机不能创建目录成功问题，缺点是删除软件后会残留此处文件
 
 //数据文件名
-var dbName = "tiku_hik.db";
+var dbName = "tiku.db";
 var dbPath = files.path(sdPath + dbName);
 var tikuVerInfo = "题库信息";
 /**
@@ -76,10 +112,11 @@ function isDatabasExist() {
         var createTable = "\
         CREATE TABLE IF NOT EXISTS tiku(\
         question CHAR(256) UNIQUE ON CONFLICT Ignore,\
-        answer CHAR(256),\
-        options CHAR(256),\
-        type CHAR(16)\
+        answer CHAR(128),\
+        wrongAnswer CHAR(32),\
+        option CHAR(32)\
         );";
+        
         db.execSQL(createTable);
 
         return false;
@@ -99,7 +136,7 @@ function searchDb(keyw, _tableName, queryStr) {
     var db = SQLiteDatabase.openOrCreateDatabase(dbPath, null);
     var query = "";
     if (queryStr == "") {
-        query = "SELECT question,answer,options,type FROM " + tableName + " WHERE question LIKE '" + keyw + "%'";//前缀匹配
+        query = "SELECT question,answer,wrongAnswer,option FROM " + tableName + " WHERE question LIKE '" + keyw + "%'";//前缀匹配
     } else {
         query = queryStr;
     }
@@ -130,7 +167,6 @@ function insertOrUpdate(sql) {
     return true;
 }
 
-var updateDialog = null;
 
 function updateTikuVer()
 {
@@ -152,15 +188,39 @@ function updateTikuVer()
 
 function updateApp()
 {
-    alert("功能开发中……");
+    //下载远程题库
+    var url = "https://cdn.staticaly.com/gh/shockeyzhang/xxqghelper/main/new.csv";//远程地址2
+    if(updateServer == "1")
+    {
+        url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/new.csv";//远程地址1
+    }
+    else if(updateServer == "2")
+    {
+        url = "https://cdn.staticaly.com/gh/shockeyzhang/xxqghelper/main/new.csv";//远程地址2
+    }
+    else
+    {
+        //url = "http://shockey.freeee.ml/xxqghelper/files/new.apk";//远程地址3 ,freehost服务器
+        url = "http://ftp6287982.host104.abeiyun.cn/xxqghelper/files/new.csv";//远程地址3 
+    }
+    
+    var downloadDialog = dialogs.build({
+        title: "正在下载...",
+        progress: {
+            max: 100,
+            showMinMax: true
+        },
+        autoDismiss: false,
+        //cancelable: false
+    }).show();
+  
+    diwnloadRemotAPP(url, downloadDialog);
 }
 
 function updateDb()
 {
     //下载远程题库
-    //var url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/tiku.csv";//远程地址1
     var url = "https://cdn.staticaly.com/gh/shockeyzhang/xxqghelper/main/tiku.csv";//远程地址2
-    //var url = "https://rawcdn.githack.com/shockeyzhang/xxqghelper/main/tiku.csv";//远程地址3 无法访问
     if(updateServer == "1")
     {
         url = "https://cdn.jsdelivr.net/gh/shockeyzhang/xxqghelper/tiku.csv";//远程地址1
@@ -171,8 +231,11 @@ function updateDb()
     }
     else
     {
-        url = "http://shockey.freeee.ml/xxqghelper/files/tiku.csv";//远程地址3 ,freehost服务器
+        //url = "http://shockey.freeee.ml/xxqghelper/files/tiku.csv";//远程地址3 ,freehost服务器
+        url = "http://ftp6287982.host104.abeiyun.cn/xxqghelper/files/tiku.csv";//远程地址3 
     }
+    
+    //log(url);
     
     var updateDialog = dialogs.build({
         title: "正在更新...",
@@ -222,7 +285,7 @@ function updateDb()
             lineTmp = lineTmp.replace(/\'/g, "");//删除单引号
             content = lineTmp.split(",");
             //console.log("Q:%s, A:%s\n", content[0], content[1]);
-            //log("len=%d",content.length);
+            //log("len=%d",content.length[[);
 
             //计算进度条位置
             p = ((lineIdx / allLine.length) * 100);
@@ -293,6 +356,7 @@ function updateDb()
 
     updateDialog.dismiss();
     updateDialog = null;
+    files.remove(csvFileName);
 }
 
 function checkUpdate()
