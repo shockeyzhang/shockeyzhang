@@ -285,7 +285,7 @@ function updateDb()
             lineTmp = lineTmp.replace(/\'/g, "");//删除单引号
             content = lineTmp.split(",");
             //console.log("Q:%s, A:%s\n", content[0], content[1]);
-            //log("len=%d",content.length[[);
+            //log("len=%d",content.length);
 
             //计算进度条位置
             p = ((lineIdx / allLine.length) * 100);
